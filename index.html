@@ -153,6 +153,14 @@
     display: flex; align-items: center; justify-content: center;
   }
   .rich-btn:hover { border-color: var(--gold-bright); color: var(--gold-bright); }
+  .rich-size-select {
+    background: var(--ink); color: var(--cream);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 3px;
+    height: 24px; padding: 0 4px;
+    font-size: 0.7rem;
+  }
+  .rich-size-select:hover { border-color: var(--gold-bright); }
   .rich-editable {
     background: var(--ink); color: var(--cream);
     border: 1px solid rgba(255,255,255,0.15);
@@ -797,6 +805,7 @@
     ];
 
     let editable;
+    let savedRange = null;
 
     buttons.forEach(b => {
       const btn = document.createElement('button');
@@ -813,6 +822,49 @@
       };
       toolbar.appendChild(btn);
     });
+
+    const sizeSelect = document.createElement('select');
+    sizeSelect.className = 'rich-size-select';
+    sizeSelect.title = 'Font size';
+    const sizeOptions = [
+      { label: 'Small', value: '2' },
+      { label: 'Normal', value: '3' },
+      { label: 'Large', value: '5' },
+      { label: 'X-Large', value: '6' },
+      { label: 'Huge', value: '7' },
+    ];
+    const defaultOpt = document.createElement('option');
+    defaultOpt.textContent = 'Size';
+    defaultOpt.value = '';
+    defaultOpt.disabled = true;
+    defaultOpt.selected = true;
+    sizeSelect.appendChild(defaultOpt);
+    sizeOptions.forEach(opt => {
+      const el = document.createElement('option');
+      el.value = opt.value;
+      el.textContent = opt.label;
+      sizeSelect.appendChild(el);
+    });
+    // Keep whatever text was selected in the editor selected even after
+    // clicking into this dropdown, so the size change applies to it.
+    sizeSelect.onmousedown = () => {
+      const sel = window.getSelection();
+      if (sel.rangeCount && editable.contains(sel.anchorNode)) {
+        savedRange = sel.getRangeAt(0).cloneRange();
+      }
+    };
+    sizeSelect.onchange = (e) => {
+      editable.focus();
+      if (savedRange) {
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(savedRange);
+      }
+      document.execCommand('fontSize', false, e.target.value);
+      onChange(editable.innerHTML);
+      sizeSelect.value = '';
+    };
+    toolbar.appendChild(sizeSelect);
     wrap.appendChild(toolbar);
 
     editable = document.createElement('div');
