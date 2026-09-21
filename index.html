@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trivia Board</title>
+<style>
+  :root {
+    --navy-deep: #0a1834;
+    --navy: #0f2352;
+    --navy-light: #16306e;
+    --gold: #e0b04e;
+    --gold-bright: #f4cd6e;
+    --cream: #f2ece1;
+    --ink: #08122a;
+    --danger: #b6462f;
+    --good: #3f8a5c;
+    --radius: 6px;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--navy-deep);
+    color: var(--cream);
+    font-family: 'Century Gothic', 'Apple Gothic', 'AppleGothic', 'Futura', 'Trebuchet MS', Verdana, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  #app { min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* ---------- Top bar ---------- */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 22px;
+    background: linear-gradient(180deg, var(--navy) 0%, var(--navy-deep) 100%);
+    border-bottom: 3px solid var(--gold);
+    flex-wrap: wrap; gap: 10px;
+  }
+  .brand {
+    font-family: 'Century Gothic', 'Apple Gothic', Futura, sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    font-size: 1.4rem;
+    color: var(--gold-bright);
+    text-shadow: 0 2px 0 rgba(0,0,0,0.4);
+  }
+  .brand span { color: var(--cream); }
+  .topbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    border-radius: var(--radius);
+    padding: 9px 16px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    transition: transform 0.08s ease, filter 0.15s ease;
+  }
+  button:active { transform: translateY(1px) scale(0.98); }
+  .btn-gold { background: var(--gold); color: var(--ink); }
+  .btn-gold:hover { filter: brightness(1.08); }
+  .btn-outline {
+    background: transparent; color: var(--cream);
+    border: 1.5px solid rgba(242,236,225,0.35);
+  }
+  .btn-outline:hover { border-color: var(--gold-bright); color: var(--gold-bright); }
+  .btn-danger { background: var(--danger); color: var(--cream); }
+  .btn-danger:hover { filter: brightness(1.1); }
+  .btn-good { background: var(--good); color: var(--cream); }
+  .btn-small { padding: 5px 10px; font-size: 0.8rem; }
+
+  /* ---------- Setup screen ---------- */
+  .setup-wrap {
+    max-width: 980px; margin: 0 auto; padding: 24px 20px 60px;
+    width: 100%;
+  }
+  .setup-intro {
+    color: rgba(242,236,225,0.75);
+    font-size: 0.95rem;
+    margin-bottom: 22px;
+    line-height: 1.5;
+  }
+  .setup-controls {
+    display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;
+    margin-bottom: 24px;
+    padding: 16px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: var(--radius);
+  }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.4px; color: rgba(242,236,225,0.6); }
+  .field input[type=number], .field input[type=text] {
+    background: var(--ink); color: var(--cream);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 4px; padding: 8px 10px; font-size: 0.95rem;
+    width: 100%;
+  }
+  .field input[type=number] { width: 90px; }
+
+  .category-block {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .category-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    background: var(--navy-light);
+  }
+  .category-header input {
+    flex: 1;
+    background: transparent; border: none; border-bottom: 1.5px solid rgba(255,255,255,0.25);
+    color: var(--gold-bright); font-weight: 700; font-size: 1.05rem;
+    padding: 4px 2px;
+    font-family: 'Century Gothic', 'Apple Gothic', Futura, sans-serif;
+    letter-spacing: 0.3px;
+  }
+  .category-header input:focus { outline: none; border-bottom-color: var(--gold); }
+
+  .clue-list { padding: 10px 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .clue-row {
+    display: grid;
+    grid-template-columns: 60px 1fr 1fr auto;
+    gap: 10px;
+    align-items: start;
+    padding: 8px;
+    background: rgba(0,0,0,0.18);
+    border-radius: 4px;
+  }
+  .clue-row .points { font-weight: 700; color: var(--gold); padding-top: 8px; text-align: center; }
+  .clue-row textarea {
+    background: var(--ink); color: var(--cream);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 4px; padding: 7px 9px; font-size: 0.85rem;
+    resize: vertical; min-height: 44px; font-family: inherit;
+    width: 100%;
+  }
+  .clue-row textarea::placeholder { color: rgba(242,236,225,0.35); }
+
+  .rich-editor { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+  .rich-toolbar { display: flex; gap: 4px; }
+  .rich-btn {
+    background: var(--ink); color: var(--cream);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 3px;
+    width: 26px; height: 24px;
+    padding: 0; font-size: 0.78rem; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .rich-btn:hover { border-color: var(--gold-bright); color: var(--gold-bright); }
+  .rich-editable {
+    background: var(--ink); color: var(--cream);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 4px; padding: 7px 9px; font-size: 0.85rem;
+    min-height: 44px; width: 100%;
+    line-height: 1.4;
+  }
+  .rich-editable:focus { outline: 1.5px solid var(--gold); }
+  .rich-editable ul, .rich-editable ol { margin: 4px 0; padding-left: 20px; }
+  .rich-editable:empty:before {
+    content: attr(data-placeholder);
+    color: rgba(242,236,225,0.35);
+  }
+  .img-cell { display: flex; flex-direction: column; gap: 10px; align-items: stretch; min-width: 100px; }
+  .img-slot { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+  .img-slot-tag {
+    font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.4px;
+    color: rgba(242,236,225,0.45);
+  }
+  .img-slot img {
+    max-width: 90px; max-height: 55px; border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.2); object-fit: cover;
+  }
+  .img-upload-label {
+    font-size: 0.72rem; color: var(--gold-bright);
+    border: 1px dashed rgba(224,176,78,0.5);
+    border-radius: 4px; padding: 5px 8px; cursor: pointer;
+    text-align: center;
+  }
+  .img-upload-label:hover { background: rgba(224,176,78,0.08); }
+  .img-slot input[type=file] { display: none; }
+  .img-remove { font-size: 0.7rem; color: rgba(242,236,225,0.55); background: none; border: none; padding: 0; text-decoration: underline; align-self: flex-start; }
+
+  /* ---------- Board screen ---------- */
+  .board-wrap {
+    flex: 1; display: flex; flex-direction: column;
+    padding: 22px; gap: 18px;
+    max-width: 1400px; margin: 0 auto; width: 100%;
+  }
+  .scoreboard {
+    display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+  }
+  .team-card {
+    background: linear-gradient(180deg, var(--navy-light), var(--navy));
+    border: 1px solid rgba(224,176,78,0.3);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    display: flex; align-items: center; gap: 10px;
+    min-width: 180px;
+  }
+  .team-card input.team-name {
+    background: transparent; border: none; color: var(--gold-bright);
+    font-weight: 700; font-size: 0.95rem; width: 100px;
+    border-bottom: 1px solid transparent;
+  }
+  .team-card input.team-name:focus { outline: none; border-bottom-color: var(--gold); }
+  .team-score { font-size: 1.3rem; font-weight: 800; color: var(--cream); min-width: 46px; text-align: center; font-variant-numeric: tabular-nums; }
+  .score-btns { display: flex; flex-direction: column; gap: 2px; }
+  .score-btns button {
+    padding: 2px 7px; font-size: 0.72rem; line-height: 1;
+    background: rgba(255,255,255,0.1); color: var(--cream);
+  }
+  .score-btns button:hover { background: rgba(255,255,255,0.2); }
+
+  .board-grid {
+    display: grid;
+    gap: 6px;
+    flex: 1;
+  }
+  .cat-header {
+    background: var(--navy-light);
+    color: var(--gold-bright);
+    font-family: 'Century Gothic', 'Apple Gothic', Futura, sans-serif;
+    font-weight: 700;
+    text-align: center;
+    padding: 12px 8px;
+    border-radius: var(--radius);
+    display: flex; align-items: center; justify-content: center;
+    font-size: clamp(0.7rem, 1.4vw, 1.05rem);
+    letter-spacing: 0.3px;
+    min-height: 60px;
+    box-shadow: inset 0 -3px 0 rgba(224,176,78,0.35);
+  }
+  .clue-cell {
+    background: linear-gradient(180deg, var(--navy) 0%, #0c1c40 100%);
+    border-radius: var(--radius);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Century Gothic', 'Apple Gothic', Futura, sans-serif;
+    font-weight: 800;
+    color: var(--gold);
+    font-size: clamp(1.2rem, 2.6vw, 2rem);
+    cursor: pointer;
+    min-height: 80px;
+    border: 1px solid rgba(224,176,78,0.15);
+    transition: filter 0.12s ease, transform 0.08s ease;
+    position: relative;
+  }
+  .clue-cell:hover:not(.used) { filter: brightness(1.25); transform: translateY(-2px); }
+  .clue-cell.used {
+    cursor: default; color: rgba(224,176,78,0.15);
+    background: rgba(255,255,255,0.02);
+  }
+
+  /* ---------- Modal ---------- */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(4,8,20,0.88);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 50; padding: 20px;
+  }
+  .modal {
+    background: var(--navy);
+    border: 2px solid var(--gold);
+    border-radius: 10px;
+    max-width: 780px; width: 100%;
+    max-height: 88vh; overflow-y: auto;
+    padding: 32px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .modal .cat-label {
+    color: var(--gold-bright); text-transform: uppercase;
+    letter-spacing: 1px; font-size: 0.8rem; margin-bottom: 6px;
+  }
+  .modal .points-label { color: rgba(242,236,225,0.5); font-size: 0.85rem; margin-bottom: 18px; }
+  .modal .clue-text {
+    font-family: 'Century Gothic', 'Apple Gothic', Futura, sans-serif;
+    font-size: clamp(1.1rem, 3vw, 1.7rem);
+    line-height: 1.4;
+    margin-bottom: 20px;
+  }
+  .modal img.clue-image {
+    max-width: 100%; max-height: 320px; border-radius: 6px;
+    margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.15);
+  }
+  .modal .clue-text ul, .modal .clue-text ol,
+  .modal .answer-reveal ul, .modal .answer-reveal ol {
+    text-align: left; display: inline-block; margin: 8px auto 0; padding-left: 24px;
+  }
+    background: rgba(224,176,78,0.1);
+    border: 1px solid rgba(224,176,78,0.4);
+    border-radius: 6px;
+    padding: 16px;
+    font-size: 1.05rem;
+    margin-bottom: 22px;
+    color: var(--gold-bright);
+  }
+  .modal-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  .empty-note {
+    text-align: center; color: rgba(242,236,225,0.5);
+    padding: 40px 20px; font-size: 0.95rem;
+  }
+
+  @media (max-width: 640px) {
+    .clue-row { grid-template-columns: 1fr; }
+    .clue-row .points { text-align: left; padding-top: 0; }
+    .img-cell { flex-direction: row; align-items: center; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+(function() {
+  const STORAGE_KEY = 'trivia_board_state_v1';
+
+  const defaultState = () => ({
+    mode: 'setup', // 'setup' | 'board'
+    numCategories: 5,
+    numClues: 5,
+    basePoints: 200,
+    categories: makeCategories(5, 5, 200),
+    teams: [
+      { name: 'Team 1', score: 0 },
+      { name: 'Team 2', score: 0 }
+    ]
+  });
+
+  function makeCategories(numCats, numClues, basePoints) {
+    const cats = [];
+    for (let c = 0; c < numCats; c++) {
+      const clues = [];
+      for (let i = 0; i < numClues; i++) {
+        clues.push({
+          points: basePoints * (i + 1),
+          question: '',
+          answer: '',
+          questionImage: null,
+          answerImage: null,
+          used: false
+        });
+      }
+      cats.push({ name: '', clues });
+    }
+    return cats;
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) { console.warn('Could not load saved board', e); }
+    return defaultState();
+  }
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) { console.warn('Could not save board (image files may be too large for storage)', e); }
+  }
+
+  let state = loadState();
+
+  function resizeCategories() {
+    const { numCategories, numClues, basePoints } = state;
+    const cats = [];
+    for (let c = 0; c < numCategories; c++) {
+      const existing = state.categories[c];
+      const clues = [];
+      for (let i = 0; i < numClues; i++) {
+        const existingClue = existing && existing.clues[i];
+        clues.push({
+          points: basePoints * (i + 1),
+          question: existingClue ? existingClue.question : '',
+          answer: existingClue ? existingClue.answer : '',
+          questionImage: existingClue ? (existingClue.questionImage !== undefined ? existingClue.questionImage : existingClue.image) : null,
+          answerImage: existingClue ? existingClue.answerImage : null,
+          used: false
+        });
+      }
+      cats.push({ name: existing ? existing.name : '', clues });
+    }
+    state.categories = cats;
+  }
+
+  function loadExampleState() {
+    const raw = [
+      { name: 'World Capitals', clues: [
+        ['This city on the Seine is the capital of France.', 'Paris'],
+        ['The capital of Japan, home to the Shibuya Crossing.', 'Tokyo'],
+        ['This African capital sits at the meeting point of the Blue and White Nile.', 'Khartoum'],
+        ['This South American capital is the highest in the world.', 'La Paz'],
+        ['This Canadian capital is not Toronto or Vancouver.', 'Ottawa'],
+      ]},
+      { name: 'Science', clues: [
+        ['The powerhouse of the cell.', 'Mitochondria'],
+        ['The chemical symbol Au represents this element.', 'Gold'],
+        ['This force keeps planets in orbit around the sun.', 'Gravity'],
+        ['The study of earthquakes.', 'Seismology'],
+        ["This gas makes up about 78% of Earth's atmosphere.", 'Nitrogen'],
+      ]},
+      { name: 'Movies', clues: [
+        ["This 1994 film follows Andy Dufresne's escape from Shawshank prison.", 'The Shawshank Redemption'],
+        ['This studio\'s mascot is a lamp that hops on the letter "I".', 'Pixar'],
+        ['This director is known for Jaws, E.T., and Jurassic Park.', 'Steven Spielberg'],
+        ['This 1997 film starred Leonardo DiCaprio and Kate Winslet on a doomed ship.', 'Titanic'],
+        ['This award is the highest honor given by the Academy of Motion Picture Arts and Sciences.', 'The Oscar (Academy Award)'],
+      ]},
+      { name: 'Sports', clues: [
+        ['This sport is played at Wimbledon.', 'Tennis'],
+        ['The number of players on a standard soccer team on the field.', '11'],
+        ['This country has won the most FIFA World Cups.', 'Brazil'],
+        ['This Olympic event combines swimming, cycling, and running.', 'Triathlon'],
+        ['This term describes three strikeouts by a pitcher in one inning, or a hat-trick in hockey/soccer.', 'A hat trick (or "the trifecta," depending on sport)'],
+      ]},
+      { name: 'Wordplay', clues: [
+        ['A word that reads the same forwards and backwards, like "level".', 'Palindrome'],
+        ['The literary term for giving human traits to non-human things.', 'Personification'],
+        ['This punctuation mark is used to show possession or contraction.', 'Apostrophe'],
+        ['A word opposite in meaning to another, like "hot" and "cold".', 'Antonym'],
+        ['This figure of speech compares two things using "like" or "as".', 'Simile'],
+      ]},
+    ];
+    const basePoints = 200;
+    const categories = raw.map(cat => ({
+      name: cat.name,
+      clues: cat.clues.map((pair, i) => ({
+        points: basePoints * (i + 1),
+        question: pair[0],
+        answer: pair[1],
+        questionImage: null,
+        answerImage: null,
+        used: false
+      }))
+    }));
+    return {
+      mode: 'setup',
+      numCategories: categories.length,
+      numClues: 5,
+      basePoints,
+      categories,
+      teams: [
+        { name: 'Team 1', score: 0 },
+        { name: 'Team 2', score: 0 }
+      ]
+    };
+  }
+
+  let activeClue = null; // {catIndex, clueIndex, showAnswer}
+
+  function render() {
+    const app = document.getElementById('app');
+    app.innerHTML = '';
+    if (state.mode === 'setup') {
+      app.appendChild(renderSetup());
+    } else {
+      app.appendChild(renderBoard());
+      if (activeClue) app.appendChild(renderModal());
+    }
+    saveState();
+  }
+
+  // ---------------- SETUP SCREEN ----------------
+  function renderSetup() {
+    const wrap = document.createElement('div');
+
+    const topbar = document.createElement('div');
+    topbar.className = 'topbar';
+    topbar.innerHTML = `<div class="brand">TRIVIA <span>BOARD BUILDER</span></div>`;
+    const actions = document.createElement('div');
+    actions.className = 'topbar-actions';
+    const importBtn = document.createElement('button');
+    importBtn.className = 'btn-outline';
+    importBtn.textContent = '⬆ Import';
+    const importInput = document.createElement('input');
+    importInput.type = 'file';
+    importInput.accept = 'application/json';
+    importInput.style.display = 'none';
+    importInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const loaded = JSON.parse(ev.target.result);
+          if (!loaded.categories) throw new Error('Not a valid board file');
+          state = loaded;
+          state.mode = 'setup';
+          render();
+        } catch (err) {
+          alert("Could not read that file. Make sure it's a board file you exported from here.");
+        }
+      };
+      reader.readAsText(file);
+      importInput.value = '';
+    };
+    importBtn.onclick = () => importInput.click();
+    actions.appendChild(importBtn);
+    actions.appendChild(importInput);
+
+    const exportBtn = document.createElement('button');
+    exportBtn.className = 'btn-outline';
+    exportBtn.textContent = '⬇ Export';
+    exportBtn.onclick = () => {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const stamp = new Date().toISOString().slice(0, 10);
+      a.download = `trivia-board-${stamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    };
+    actions.appendChild(exportBtn);
+
+    const playBtn = document.createElement('button');
+    playBtn.className = 'btn-gold';
+    playBtn.textContent = '▶ Start Game';
+    playBtn.onclick = () => { state.mode = 'board'; render(); };
+    actions.appendChild(playBtn);
+    topbar.appendChild(actions);
+    wrap.appendChild(topbar);
+
+    const inner = document.createElement('div');
+    inner.className = 'setup-wrap';
+
+    const intro = document.createElement('p');
+    intro.className = 'setup-intro';
+    intro.textContent = 'Set up your categories and clues below. Add a picture to any clue if you want — it will show up when that clue is revealed during play. Everything saves automatically in this browser.';
+    inner.appendChild(intro);
+
+    const controls = document.createElement('div');
+    controls.className = 'setup-controls';
+    controls.innerHTML = `
+      <div class="field">
+        <label>Categories</label>
+        <input type="number" min="1" max="8" id="numCategories" value="${state.numCategories}">
+      </div>
+      <div class="field">
+        <label>Clues per category</label>
+        <input type="number" min="1" max="8" id="numClues" value="${state.numClues}">
+      </div>
+      <div class="field">
+        <label>Starting point value</label>
+        <input type="number" min="10" step="10" id="basePoints" value="${state.basePoints}">
+      </div>
+      <button class="btn-outline btn-small" id="applyGrid">Apply</button>
+      <button class="btn-outline btn-small" id="clearAll" style="margin-left:auto;">Clear board</button>
+    `;
+    inner.appendChild(controls);
+
+    controls.querySelector('#applyGrid').onclick = () => {
+      state.numCategories = clamp(parseInt(controls.querySelector('#numCategories').value) || 5, 1, 8);
+      state.numClues = clamp(parseInt(controls.querySelector('#numClues').value) || 5, 1, 8);
+      state.basePoints = parseInt(controls.querySelector('#basePoints').value) || 200;
+      resizeCategories();
+      render();
+    };
+    controls.querySelector('#clearAll').onclick = () => {
+      if (confirm('Clear all categories, clues, and images? This cannot be undone.')) {
+        state = defaultState();
+        render();
+      }
+    };
+
+    const exampleBtn = document.createElement('button');
+    exampleBtn.className = 'btn-outline btn-small';
+    exampleBtn.textContent = 'Load example board';
+    exampleBtn.onclick = () => {
+      if (state.categories.some(c => c.name || c.clues.some(cl => stripHTML(cl.question))) &&
+          !confirm('This will replace your current board with a filled-in example. Continue?')) {
+        return;
+      }
+      state = loadExampleState();
+      render();
+    };
+    controls.appendChild(exampleBtn);
+
+    state.categories.forEach((cat, catIndex) => {
+      inner.appendChild(renderCategoryBlock(cat, catIndex));
+    });
+
+    wrap.appendChild(inner);
+    return wrap;
+  }
+
+  function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+  function renderImageSlot(clue, field, labelText) {
+    const slot = document.createElement('div');
+    slot.className = 'img-slot';
+
+    const tag = document.createElement('div');
+    tag.className = 'img-slot-tag';
+    tag.textContent = labelText;
+    slot.appendChild(tag);
+
+    if (clue[field]) {
+      const img = document.createElement('img');
+      img.src = clue[field];
+      slot.appendChild(img);
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'img-remove';
+      removeBtn.textContent = 'Remove';
+      removeBtn.onclick = () => { clue[field] = null; render(); };
+      slot.appendChild(removeBtn);
+    } else {
+      const label = document.createElement('label');
+      label.className = 'img-upload-label';
+      label.textContent = '+ Add';
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'image/*';
+      fileInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          clue[field] = ev.target.result;
+          render();
+        };
+        reader.readAsDataURL(file);
+      };
+      label.appendChild(fileInput);
+      slot.appendChild(label);
+    }
+    return slot;
+  }
+
+  function stripHTML(html) {
+    if (!html) return '';
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent.trim();
+  }
+
+  function createRichEditor(initialHTML, onChange, placeholder) {
+    const wrap = document.createElement('div');
+    wrap.className = 'rich-editor';
+
+    const toolbar = document.createElement('div');
+    toolbar.className = 'rich-toolbar';
+
+    const buttons = [
+      { cmd: 'bold', label: 'B', title: 'Bold', style: 'font-weight:800;' },
+      { cmd: 'italic', label: 'I', title: 'Italic', style: 'font-style:italic;' },
+      { cmd: 'underline', label: 'U', title: 'Underline', style: 'text-decoration:underline;' },
+      { cmd: 'insertUnorderedList', label: '•≡', title: 'Bullet list' },
+      { cmd: 'insertOrderedList', label: '1≡', title: 'Numbered list' },
+    ];
+
+    let editable;
+
+    buttons.forEach(b => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'rich-btn';
+      btn.textContent = b.label;
+      btn.title = b.title;
+      if (b.style) btn.setAttribute('style', b.style);
+      btn.onmousedown = (e) => e.preventDefault(); // keep selection focused in the editable area
+      btn.onclick = () => {
+        editable.focus();
+        document.execCommand(b.cmd, false, null);
+        onChange(editable.innerHTML);
+      };
+      toolbar.appendChild(btn);
+    });
+    wrap.appendChild(toolbar);
+
+    editable = document.createElement('div');
+    editable.className = 'rich-editable';
+    editable.contentEditable = 'true';
+    editable.setAttribute('data-placeholder', placeholder || '');
+    editable.innerHTML = initialHTML || '';
+    editable.oninput = () => onChange(editable.innerHTML);
+    wrap.appendChild(editable);
+
+    return wrap;
+  }
+
+  function renderCategoryBlock(cat, catIndex) {
+    const block = document.createElement('div');
+    block.className = 'category-block';
+
+    const header = document.createElement('div');
+    header.className = 'category-header';
+    header.innerHTML = `<span style="color:rgba(242,236,225,0.5); font-size:0.8rem;">CAT ${catIndex + 1}</span>`;
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.placeholder = 'Category name';
+    nameInput.value = cat.name;
+    nameInput.oninput = (e) => { cat.name = e.target.value; saveState(); };
+    header.appendChild(nameInput);
+    block.appendChild(header);
+
+    const clueList = document.createElement('div');
+    clueList.className = 'clue-list';
+
+    cat.clues.forEach((clue, clueIndex) => {
+      const row = document.createElement('div');
+      row.className = 'clue-row';
+
+      const pointsEl = document.createElement('div');
+      pointsEl.className = 'points';
+      pointsEl.textContent = clue.points;
+      row.appendChild(pointsEl);
+
+      const qWrap = createRichEditor(clue.question, (html) => { clue.question = html; saveState(); }, 'Question / clue text');
+      row.appendChild(qWrap);
+
+      const aWrap = createRichEditor(clue.answer, (html) => { clue.answer = html; saveState(); }, 'Answer');
+      row.appendChild(aWrap);
+
+      const imgCell = document.createElement('div');
+      imgCell.className = 'img-cell';
+      imgCell.appendChild(renderImageSlot(clue, 'questionImage', 'Question picture'));
+      imgCell.appendChild(renderImageSlot(clue, 'answerImage', 'Answer picture'));
+      row.appendChild(imgCell);
+
+      clueList.appendChild(row);
+    });
+
+    block.appendChild(clueList);
+    return block;
+  }
+
+  // ---------------- BOARD SCREEN ----------------
+  function renderBoard() {
+    const wrap = document.createElement('div');
+    wrap.style.display = 'flex';
+    wrap.style.flexDirection = 'column';
+    wrap.style.minHeight = '100vh';
+
+    const topbar = document.createElement('div');
+    topbar.className = 'topbar';
+    topbar.innerHTML = `<div class="brand">TRIVIA <span>BOARD</span></div>`;
+    const actions = document.createElement('div');
+    actions.className = 'topbar-actions';
+
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn-outline';
+    editBtn.textContent = '✎ Edit Board';
+    editBtn.onclick = () => { state.mode = 'setup'; render(); };
+    actions.appendChild(editBtn);
+
+    const resetRoundBtn = document.createElement('button');
+    resetRoundBtn.className = 'btn-outline';
+    resetRoundBtn.textContent = '↺ Reset Round';
+    resetRoundBtn.onclick = () => {
+      if (confirm('Mark all clues as unused again? Scores stay as they are.')) {
+        state.categories.forEach(cat => cat.clues.forEach(cl => cl.used = false));
+        render();
+      }
+    };
+    actions.appendChild(resetRoundBtn);
+
+    topbar.appendChild(actions);
+    wrap.appendChild(topbar);
+
+    const boardWrap = document.createElement('div');
+    boardWrap.className = 'board-wrap';
+
+    // scoreboard
+    const scoreboard = document.createElement('div');
+    scoreboard.className = 'scoreboard';
+    state.teams.forEach((team, i) => {
+      const card = document.createElement('div');
+      card.className = 'team-card';
+      const nameInput = document.createElement('input');
+      nameInput.className = 'team-name';
+      nameInput.value = team.name;
+      nameInput.oninput = (e) => { team.name = e.target.value; saveState(); };
+      card.appendChild(nameInput);
+
+      const scoreEl = document.createElement('div');
+      scoreEl.className = 'team-score';
+      scoreEl.textContent = team.score;
+      card.appendChild(scoreEl);
+
+      const btns = document.createElement('div');
+      btns.className = 'score-btns';
+      const upBtn = document.createElement('button');
+      upBtn.textContent = '▲';
+      upBtn.onclick = () => { team.score += 100; render(); };
+      const downBtn = document.createElement('button');
+      downBtn.textContent = '▼';
+      downBtn.onclick = () => { team.score -= 100; render(); };
+      btns.appendChild(upBtn);
+      btns.appendChild(downBtn);
+      card.appendChild(btns);
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'btn-small btn-outline';
+      removeBtn.style.marginLeft = '4px';
+      removeBtn.textContent = '✕';
+      removeBtn.title = 'Remove team';
+      removeBtn.onclick = () => { state.teams.splice(i, 1); render(); };
+      card.appendChild(removeBtn);
+
+      scoreboard.appendChild(card);
+    });
+    const addTeamBtn = document.createElement('button');
+    addTeamBtn.className = 'btn-outline';
+    addTeamBtn.textContent = '+ Add team';
+    addTeamBtn.onclick = () => {
+      state.teams.push({ name: 'Team ' + (state.teams.length + 1), score: 0 });
+      render();
+    };
+    scoreboard.appendChild(addTeamBtn);
+    boardWrap.appendChild(scoreboard);
+
+    const hasContent = state.categories.some(c => c.name || c.clues.some(cl => stripHTML(cl.question)));
+    if (!hasContent) {
+      const note = document.createElement('div');
+      note.className = 'empty-note';
+      note.textContent = 'This board is empty. Click "Edit Board" to add categories, clues, and pictures.';
+      boardWrap.appendChild(note);
+      wrap.appendChild(boardWrap);
+      return wrap;
+    }
+
+    const grid = document.createElement('div');
+    grid.className = 'board-grid';
+    grid.style.gridTemplateColumns = `repeat(${state.categories.length}, 1fr)`;
+    grid.style.gridTemplateRows = `auto repeat(${state.numClues}, 1fr)`;
+
+    state.categories.forEach(cat => {
+      const header = document.createElement('div');
+      header.className = 'cat-header';
+      header.textContent = cat.name || 'Category';
+      grid.appendChild(header);
+    });
+
+    for (let clueIndex = 0; clueIndex < state.numClues; clueIndex++) {
+      state.categories.forEach((cat, catIndex) => {
+        const clue = cat.clues[clueIndex];
+        const cell = document.createElement('div');
+        cell.className = 'clue-cell' + (clue.used ? ' used' : '');
+        cell.textContent = clue.used ? '' : ('$' + clue.points);
+        if (!clue.used) {
+          cell.onclick = () => {
+            activeClue = { catIndex, clueIndex, showAnswer: false };
+            render();
+          };
+        }
+        grid.appendChild(cell);
+      });
+    }
+
+    boardWrap.appendChild(grid);
+    wrap.appendChild(boardWrap);
+    return wrap;
+  }
+
+  function renderModal() {
+    const { catIndex, clueIndex, showAnswer } = activeClue;
+    const cat = state.categories[catIndex];
+    const clue = cat.clues[clueIndex];
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+    backdrop.onclick = (e) => { if (e.target === backdrop) closeModal(); };
+
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+
+    const catLabel = document.createElement('div');
+    catLabel.className = 'cat-label';
+    catLabel.textContent = cat.name || 'Category';
+    modal.appendChild(catLabel);
+
+    const pointsLabel = document.createElement('div');
+    pointsLabel.className = 'points-label';
+    pointsLabel.textContent = '$' + clue.points;
+    modal.appendChild(pointsLabel);
+
+    const clueText = document.createElement('div');
+    clueText.className = 'clue-text';
+    clueText.innerHTML = stripHTML(clue.question) ? clue.question : '<em>(No question text was added for this clue.)</em>';
+    modal.appendChild(clueText);
+
+    if (clue.questionImage) {
+      const img = document.createElement('img');
+      img.className = 'clue-image';
+      img.src = clue.questionImage;
+      modal.appendChild(img);
+    }
+
+    if (showAnswer) {
+      const answerBox = document.createElement('div');
+      answerBox.className = 'answer-reveal';
+      answerBox.innerHTML = stripHTML(clue.answer) ? clue.answer : '<em>(No answer was added for this clue.)</em>';
+      modal.appendChild(answerBox);
+
+      if (clue.answerImage) {
+        const aImg = document.createElement('img');
+        aImg.className = 'clue-image';
+        aImg.src = clue.answerImage;
+        modal.appendChild(aImg);
+      }
+    }
+
+    const modalActions = document.createElement('div');
+    modalActions.className = 'modal-actions';
+
+    if (!showAnswer) {
+      const revealBtn = document.createElement('button');
+      revealBtn.className = 'btn-gold';
+      revealBtn.textContent = 'Reveal Answer';
+      revealBtn.onclick = () => { activeClue.showAnswer = true; render(); };
+      modalActions.appendChild(revealBtn);
+    }
+
+    const doneBtn = document.createElement('button');
+    doneBtn.className = 'btn-good';
+    doneBtn.textContent = 'Mark Done & Close';
+    doneBtn.onclick = () => {
+      clue.used = true;
+      closeModal();
+    };
+    modalActions.appendChild(doneBtn);
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'btn-outline';
+    closeBtn.textContent = 'Close without marking';
+    closeBtn.onclick = () => closeModal();
+    modalActions.appendChild(closeBtn);
+
+    modal.appendChild(modalActions);
+    backdrop.appendChild(modal);
+    return backdrop;
+  }
+
+  function closeModal() {
+    activeClue = null;
+    render();
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
