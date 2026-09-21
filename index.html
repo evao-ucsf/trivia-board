@@ -190,7 +190,7 @@
   .board-wrap {
     flex: 1; display: flex; flex-direction: column;
     padding: 22px; gap: 18px;
-    max-width: 1400px; margin: 0 auto; width: 100%;
+    max-width: 1600px; margin: 0 auto; width: 100%;
   }
   .scoreboard {
     display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
@@ -243,9 +243,9 @@
     font-family: 'Century Gothic', 'Apple Gothic', Futura, sans-serif;
     font-weight: 800;
     color: var(--gold);
-    font-size: clamp(1.2rem, 2.6vw, 2rem);
+    font-size: clamp(1.4rem, 3vw, 2.4rem);
     cursor: pointer;
-    min-height: 80px;
+    min-height: 100px;
     border: 1px solid rgba(224,176,78,0.15);
     transition: filter 0.12s ease, transform 0.08s ease;
     position: relative;
@@ -266,26 +266,26 @@
     background: var(--navy);
     border: 2px solid var(--gold);
     border-radius: 10px;
-    max-width: 780px; width: 100%;
-    max-height: 88vh; overflow-y: auto;
-    padding: 32px;
+    max-width: 1100px; width: 92%;
+    max-height: 92vh; overflow-y: auto;
+    padding: 48px 56px;
     text-align: center;
     box-shadow: 0 20px 60px rgba(0,0,0,0.5);
   }
   .modal .cat-label {
     color: var(--gold-bright); text-transform: uppercase;
-    letter-spacing: 1px; font-size: 0.8rem; margin-bottom: 6px;
+    letter-spacing: 1px; font-size: 1rem; margin-bottom: 8px;
   }
-  .modal .points-label { color: rgba(242,236,225,0.5); font-size: 0.85rem; margin-bottom: 18px; }
+  .modal .points-label { color: rgba(242,236,225,0.5); font-size: 1.05rem; margin-bottom: 26px; }
   .modal .clue-text {
     font-family: 'Century Gothic', 'Apple Gothic', Futura, sans-serif;
-    font-size: clamp(1.1rem, 3vw, 1.7rem);
-    line-height: 1.4;
-    margin-bottom: 20px;
+    font-size: clamp(1.5rem, 4vw, 2.6rem);
+    line-height: 1.45;
+    margin-bottom: 28px;
   }
   .modal img.clue-image {
-    max-width: 100%; max-height: 320px; border-radius: 6px;
-    margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.15);
+    max-width: 100%; max-height: 440px; border-radius: 6px;
+    margin-bottom: 26px; border: 1px solid rgba(255,255,255,0.15);
   }
   .modal .clue-text ul, .modal .clue-text ol,
   .modal .answer-reveal ul, .modal .answer-reveal ol {
@@ -294,9 +294,9 @@
     background: rgba(224,176,78,0.1);
     border: 1px solid rgba(224,176,78,0.4);
     border-radius: 6px;
-    padding: 16px;
-    font-size: 1.05rem;
-    margin-bottom: 22px;
+    padding: 22px;
+    font-size: clamp(1.1rem, 2.6vw, 1.5rem);
+    margin-bottom: 28px;
     color: var(--gold-bright);
   }
   .modal-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
@@ -310,6 +310,33 @@
     .clue-row { grid-template-columns: 1fr; }
     .clue-row .points { text-align: left; padding-top: 0; }
     .img-cell { flex-direction: row; align-items: center; }
+  }
+
+  /* ---------- Print ---------- */
+  #printSheet { display: none; }
+  @media print {
+    body * { visibility: hidden; }
+    #printSheet, #printSheet * { visibility: visible; }
+    #printSheet {
+      display: block;
+      position: absolute; top: 0; left: 0; width: 100%;
+      background: #fff; color: #111;
+      padding: 20px;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    #printSheet h1 { font-size: 20px; margin-bottom: 16px; }
+    #printSheet h2 {
+      font-size: 16px; margin: 18px 0 8px;
+      border-bottom: 2px solid #333; padding-bottom: 4px;
+    }
+    #printSheet .print-clue {
+      margin-bottom: 8px; padding-bottom: 6px;
+      border-bottom: 1px solid #ddd;
+      page-break-inside: avoid;
+    }
+    #printSheet .print-points { font-weight: bold; font-size: 13px; color: #444; }
+    #printSheet .print-q { font-size: 13px; margin-top: 2px; }
+    #printSheet .print-a { font-size: 13px; margin-top: 2px; color: #1a5c1a; }
   }
 </style>
 </head>
@@ -351,12 +378,99 @@
     return cats;
   }
 
+  function printAnswerKey(st) {
+    let existing = document.getElementById('printSheet');
+    if (existing) existing.remove();
+
+    const sheet = document.createElement('div');
+    sheet.id = 'printSheet';
+
+    const title = document.createElement('h1');
+    title.textContent = 'Trivia Board — Answer Key';
+    sheet.appendChild(title);
+
+    st.categories.forEach(cat => {
+      const catBlock = document.createElement('div');
+      catBlock.className = 'print-category';
+
+      const catTitle = document.createElement('h2');
+      catTitle.textContent = cat.name || 'Category';
+      catBlock.appendChild(catTitle);
+
+      cat.clues.forEach(clue => {
+        const item = document.createElement('div');
+        item.className = 'print-clue';
+
+        const pts = document.createElement('div');
+        pts.className = 'print-points';
+        pts.textContent = '$' + clue.points;
+        item.appendChild(pts);
+
+        const qBlock = document.createElement('div');
+        qBlock.className = 'print-q';
+        qBlock.innerHTML = '<strong>Q:</strong> ' + (stripHTML(clue.question) ? clue.question : '<em>(no question text)</em>');
+        item.appendChild(qBlock);
+
+        const aBlock = document.createElement('div');
+        aBlock.className = 'print-a';
+        aBlock.innerHTML = '<strong>A:</strong> ' + (stripHTML(clue.answer) ? clue.answer : '<em>(no answer text)</em>');
+        item.appendChild(aBlock);
+
+        catBlock.appendChild(item);
+      });
+
+      sheet.appendChild(catBlock);
+    });
+
+    document.body.appendChild(sheet);
+    window.print();
+    setTimeout(() => { sheet.remove(); }, 500);
+  }
+
   function loadState() {
+    // Priority 1: a board encoded in the URL (shareable link) — this is what makes
+    // opening a link "ready to go" without relying on this browser's storage.
+    const fromUrl = decodeStateFromURL();
+    if (fromUrl) return fromUrl;
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) return JSON.parse(raw);
     } catch (e) { console.warn('Could not load saved board', e); }
     return defaultState();
+  }
+
+  function utf8ToB64(str) {
+    return btoa(unescape(encodeURIComponent(str)));
+  }
+  function b64ToUtf8(str) {
+    return decodeURIComponent(escape(atob(str)));
+  }
+
+  function encodeStateToURL(st) {
+    const json = JSON.stringify(st);
+    return utf8ToB64(json);
+  }
+
+  function decodeStateFromURL() {
+    const hash = window.location.hash;
+    const marker = '#board=';
+    if (!hash || !hash.startsWith(marker)) return null;
+    try {
+      const encoded = hash.slice(marker.length);
+      const json = b64ToUtf8(decodeURIComponent(encoded));
+      const parsed = JSON.parse(json);
+      if (!parsed.categories) return null;
+      return parsed;
+    } catch (e) {
+      console.warn('Could not read board from link', e);
+      return null;
+    }
+  }
+
+  function getShareableLink(st) {
+    const encoded = encodeURIComponent(encodeStateToURL(st));
+    const base = window.location.origin + window.location.pathname;
+    return base + '#board=' + encoded;
   }
 
   function saveState() {
@@ -403,10 +517,10 @@
         ['The chemical symbol Au represents this element.', 'Gold'],
         ['This force keeps planets in orbit around the sun.', 'Gravity'],
         ['The study of earthquakes.', 'Seismology'],
-        ["This gas makes up about 78% of Earth's atmosphere.", 'Nitrogen'],
+        ['This gas makes up about 78% of Earth\'s atmosphere.', 'Nitrogen'],
       ]},
       { name: 'Movies', clues: [
-        ["This 1994 film follows Andy Dufresne's escape from Shawshank prison.", 'The Shawshank Redemption'],
+        ['This 1994 film follows Andy Dufresne\'s escape from Shawshank prison.', 'The Shawshank Redemption'],
         ['This studio\'s mascot is a lamp that hops on the letter "I".', 'Pixar'],
         ['This director is known for Jaws, E.T., and Jurassic Park.', 'Steven Spielberg'],
         ['This 1997 film starred Leonardo DiCaprio and Kate Winslet on a doomed ship.', 'Titanic'],
@@ -494,7 +608,7 @@
           state.mode = 'setup';
           render();
         } catch (err) {
-          alert("Could not read that file. Make sure it's a board file you exported from here.");
+          alert('Could not read that file. Make sure it\'s a board file you exported from here.');
         }
       };
       reader.readAsText(file);
@@ -520,6 +634,31 @@
       URL.revokeObjectURL(url);
     };
     actions.appendChild(exportBtn);
+
+    const linkBtn = document.createElement('button');
+    linkBtn.className = 'btn-outline';
+    linkBtn.textContent = '🔗 Get Shareable Link';
+    linkBtn.onclick = () => {
+      const link = getShareableLink(state);
+      window.location.hash = 'board=' + encodeURIComponent(encodeStateToURL(state));
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(link).then(() => {
+          alert('Link copied to your clipboard! Anyone who opens it will see this exact board, already filled in — no setup needed on their end.\n\nHeads up: if you added pictures, this link will be long. That\'s normal — it still works, it just may be awkward to paste into some chat apps that trim long text.');
+        }).catch(() => {
+          prompt('Copy this link:', link);
+        });
+      } else {
+        prompt('Copy this link:', link);
+      }
+      render();
+    };
+    actions.appendChild(linkBtn);
+
+    const printBtn = document.createElement('button');
+    printBtn.className = 'btn-outline';
+    printBtn.textContent = '🖨 Print Answer Key';
+    printBtn.onclick = () => printAnswerKey(state);
+    actions.appendChild(printBtn);
 
     const playBtn = document.createElement('button');
     playBtn.className = 'btn-gold';
@@ -762,6 +901,12 @@
       }
     };
     actions.appendChild(resetRoundBtn);
+
+    const printBtnBoard = document.createElement('button');
+    printBtnBoard.className = 'btn-outline';
+    printBtnBoard.textContent = '🖨 Print Answer Key';
+    printBtnBoard.onclick = () => printAnswerKey(state);
+    actions.appendChild(printBtnBoard);
 
     topbar.appendChild(actions);
     wrap.appendChild(topbar);
