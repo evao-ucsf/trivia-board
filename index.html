@@ -481,6 +481,19 @@
     return base + '#board=' + encoded;
   }
 
+  async function loadBoardFromFile(filename) {
+    try {
+      const res = await fetch(filename);
+      if (!res.ok) throw new Error('File not found: ' + filename);
+      const loaded = await res.json();
+      if (!loaded.categories) throw new Error('Not a valid board file');
+      return loaded;
+    } catch (e) {
+      console.warn('Could not load board file from link', e);
+      return null;
+    }
+  }
+
   function saveState() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -488,6 +501,17 @@
   }
 
   let state = loadState();
+
+  // If this page was just opened from a shared link, save that board to this
+  // browser right away and clean the (potentially huge) link out of the
+  // address bar. From now on, this device just autosaves normally — it
+  // won't re-import the same snapshot every time the page is reopened.
+  if (window.location.hash && window.location.hash.indexOf('#board=') === 0) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  }
 
   function resizeCategories() {
     const { numCategories, numClues, basePoints } = state;
@@ -647,18 +671,33 @@
     linkBtn.className = 'btn-outline';
     linkBtn.textContent = '🔗 Get Shareable Link';
     linkBtn.onclick = () => {
+      const hasImages = state.categories.some(c => c.clues.some(cl => cl.questionImage || cl.answerImage));
+      const encodedSize = encodeStateToURL(state).length;
+      const pageUrl = window.location.origin + window.location.pathname;
+
+      if (hasImages || encodedSize > 50000) {
+        alert(
+          "Your board has pictures (or a lot of text), so it's too big to safely fit inside a link — that's what was crashing the browser before.\n\n" +
+          "Do this instead:\n" +
+          "1. Click \"Export\" to save your board as a .json file.\n" +
+          "2. In your GitHub repo, click \"Add file\" → \"Upload files\" and upload that .json file.\n" +
+          "3. Share this link, replacing YOUR-FILE-NAME.json with the exact file name you uploaded:\n\n" +
+          pageUrl + "?board=YOUR-FILE-NAME.json\n\n" +
+          "Anyone who opens that link will get your board pre-loaded and ready to play — no setup on their end."
+        );
+        return;
+      }
+
       const link = getShareableLink(state);
-      window.location.hash = 'board=' + encodeURIComponent(encodeStateToURL(state));
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(link).then(() => {
-          alert('Link copied to your clipboard! Anyone who opens it will see this exact board, already filled in — no setup needed on their end.\n\nHeads up: if you added pictures, this link will be long. That\'s normal — it still works, it just may be awkward to paste into some chat apps that trim long text.');
+          alert('Link copied to your clipboard! Anyone who opens it will see this exact board, already filled in — no setup needed on their end.');
         }).catch(() => {
           prompt('Copy this link:', link);
         });
       } else {
         prompt('Copy this link:', link);
       }
-      render();
     };
     actions.appendChild(linkBtn);
 
@@ -741,6 +780,32 @@
 
   function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 
+  function compressImage(file, callback) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        const maxDim = 800;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
+          else { width = Math.round(width * maxDim / height); height = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        // JPEG at 75% quality keeps images small enough to embed in a
+        // shareable link and in browser storage without bloating either.
+        callback(canvas.toDataURL('image/jpeg', 0.75));
+      };
+      img.onerror = () => callback(e.target.result); // fall back to original if it won't decode
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
   function renderImageSlot(clue, field, labelText) {
     const slot = document.createElement('div');
     slot.className = 'img-slot';
@@ -769,12 +834,10 @@
       fileInput.onchange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          clue[field] = ev.target.result;
+        compressImage(file, (dataUrl) => {
+          clue[field] = dataUrl;
           render();
-        };
-        reader.readAsDataURL(file);
+        });
       };
       label.appendChild(fileInput);
       slot.appendChild(label);
@@ -1142,7 +1205,32 @@
     render();
   }
 
-  render();
+  async function init() {
+    // Preferred, crash-safe way to share a ready-made board: a small link
+    // that points to a .json file sitting next to this page (see the
+    // "Get Shareable Link" button for exact instructions).
+    const params = new URLSearchParams(window.location.search);
+    const boardFile = params.get('board');
+    if (boardFile) {
+      const loaded = await loadBoardFromFile(boardFile);
+      if (loaded) {
+        state = loaded;
+        state.mode = 'board';
+        // Save it locally and drop the query param, so refreshing later
+        // resumes from here (with scores/revealed clues intact) instead of
+        // re-fetching the original file and losing progress.
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState(null, '', window.location.pathname + window.location.hash);
+        }
+        render();
+        return;
+      }
+    }
+    render();
+  }
+
+  init();
 })();
 </script>
 </body>
